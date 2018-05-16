@@ -17,28 +17,50 @@
 /////////////////////////////////////////////////////////////////////
 
 function WebhookNodeSelected(node) {
-  $('#monitorFolder').hide();
   if (node.type !== 'folders') return;
+  updateCurrentMonitor(node);
+}
 
+function updateCurrentMonitor(node) {
+  $('#startMonitorFolder').hide();
+  $('#stopMonitorFolder').hide();
   jQuery.ajax({
     url: '/api/forge/webhook?href=' + node.id,
     success: function (res) {
-      if (res.length == 0) {
-        $('#monitorFolder').show();
-      }
+      if (res.length == 0)
+        $('#startMonitorFolder').show();
+      else
+        $('#stopMonitorFolder').show();
     }
   });
 }
 
 $(document).ready(function () {
-  $('#monitorFolder').click(function () {
-    var nodeId = $("#userHubs").jstree("get_selected");
+  $('#startMonitorFolder').hide();
+  $('#stopMonitorFolder').hide();
+
+  $('#startMonitorFolder').click(function () {
+    var node = $("#userHubs").jstree("get_selected", true);
+    if (node.length != 1 || node[0].type !== 'folders') return;
     $.ajax({
       type: "POST",
       url: '/api/forge/webhook',
-      data: { href: nodeId },
+      data: { href: node[0].id },
       success: function (res) {
-        console.log(res);
+        updateCurrentMonitor(node[0]);
+      }
+    });
+  });
+
+  $('#stopMonitorFolder').click(function () {
+    var node = $("#userHubs").jstree("get_selected", true);
+    if (node.length != 1 || node[0].type !== 'folders') return;
+    $.ajax({
+      type: "DELETE",
+      url: '/api/forge/webhook',
+      data: { href: node[0].id },
+      success: function (res) {
+        updateCurrentMonitor(node[0]);
       }
     });
   });

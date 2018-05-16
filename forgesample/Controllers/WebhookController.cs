@@ -28,14 +28,21 @@ namespace forgesample.Controllers
   {
     public string CallbackUrl { get { return Credentials.GetAppSetting("FORGE_WEBHOOK_CALLBACK_URL"); } }
 
-    [HttpGet]
-    [Route("api/forge/webhook")]
-    public async Task<IList<GetHookData.Hook>> GetHooks([FromUri]string href)
+    private string ExtractFolderIdFromHref(string href)
     {
       string[] idParams = href.Split('/');
       string resource = idParams[idParams.Length - 2];
       string folderId = idParams[idParams.Length - 1];
-      if (!resource.Equals("folders")) return null;
+      if (!resource.Equals("folders")) return string.Empty;
+      return folderId;
+    }
+
+    [HttpGet]
+    [Route("api/forge/webhook")]
+    public async Task<IList<GetHookData.Hook>> GetHooks([FromUri]string href)
+    {
+      string folderId = ExtractFolderIdFromHref(href);
+      if (string.IsNullOrWhiteSpace(folderId)) return null;
 
       Credentials credentials = await Credentials.FromSessionAsync();
 
@@ -45,24 +52,35 @@ namespace forgesample.Controllers
       return hooks; // return everything for now...
     }
 
-    public struct CreateHookInput
+    public struct HookInputData
     {
       public string href { get; set; }
     }
 
     [HttpPost]
     [Route("api/forge/webhook")]
-    public async Task CreateHook([FromBody]CreateHookInput input)
+    public async Task CreateHook([FromBody]HookInputData input)
     {
-      string[] idParams = input.href.Split('/');
-      string resource = idParams[idParams.Length - 2];
-      string folderId = idParams[idParams.Length - 1];
-      if (!resource.Equals("folders")) return;
+      string folderId = ExtractFolderIdFromHref(input.href);
+      if (string.IsNullOrWhiteSpace(folderId)) return;
 
       Credentials credentials = await Credentials.FromSessionAsync();
 
       DMWebhook webhooksApi = new DMWebhook(credentials.TokenInternal, CallbackUrl);
       await webhooksApi.CreateHook(Event.VersionAdded, folderId);
+    }
+
+    [HttpDelete]
+    [Route("api/forge/webhook")]
+    public async Task DeleteHook([FromBody]HookInputData input)
+    {
+      string folderId = ExtractFolderIdFromHref(input.href);
+      if (string.IsNullOrWhiteSpace(folderId)) return;
+
+      Credentials credentials = await Credentials.FromSessionAsync();
+
+      DMWebhook webhooksApi = new DMWebhook(credentials.TokenInternal, CallbackUrl);
+      await webhooksApi.DeleteHook(Event.VersionAdded, folderId);
     }
 
     [HttpPost]

@@ -75,6 +75,29 @@ namespace forgesample.Forge
       return response.StatusCode;
     }
 
+    /// <summary>
+    /// http://developer.autodesk.com/en/docs/webhooks/v1/reference/http/systems-system-events-event-hooks-hook_id-DELETE/
+    /// </summary>
+    /// <returns></returns>
+    public async Task<IDictionary<string, HttpStatusCode>> DeleteHook(Event eventType, string folderId)
+    {
+      IList<GetHookData.Hook> hooks = await Hooks(eventType, folderId);
+      IDictionary<string, HttpStatusCode> status = new Dictionary<string, HttpStatusCode>();
+
+      foreach (GetHookData.Hook hook in hooks)
+      {
+        RestRequest request = new RestRequest("/webhooks/v1/systems/data/events/{event}/hooks/{hook_id}", Method.DELETE);
+        request.AddParameter("event", EnumToString(eventType), ParameterType.UrlSegment);
+        request.AddParameter("hook_id", hook.hookId, ParameterType.UrlSegment);
+        request.AddHeader("Authorization", "Bearer " + AccessToken);
+        IRestResponse response = await client.ExecuteTaskAsync(request);
+
+        status.Add(hook.hookId, response.StatusCode);
+      }
+
+      return status;
+    }
+
     private string EnumToString(Event eventType)
     {
       return "dm." + string.Join(".", Regex.Split(System.Enum.GetName(typeof(Event), eventType), @"(?<!^)(?=[A-Z])")).ToLower();
