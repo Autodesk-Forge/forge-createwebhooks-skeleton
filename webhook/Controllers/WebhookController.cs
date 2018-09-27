@@ -24,6 +24,7 @@ using Microsoft.AspNetCore.Http;
 using System.Net;
 using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
+using Hangfire;
 
 namespace WebHook.Controllers
 {
@@ -67,7 +68,7 @@ namespace WebHook.Controllers
             if (Credentials == null) { return null; }
 
             DMWebhook webhooksApi = new DMWebhook(Credentials.TokenInternal, CallbackUrl);
-            IList<GetHookData.Hook> hooks = await webhooksApi.Hooks(Event.VersionModified, folderId);
+            IList<GetHookData.Hook> hooks = await webhooksApi.Hooks(Event.VersionAdded, folderId);
 
             return hooks;
         }
@@ -91,7 +92,7 @@ namespace WebHook.Controllers
             if (Credentials == null) { return Unauthorized(); }
 
             DMWebhook webhooksApi = new DMWebhook(Credentials.TokenInternal, CallbackUrl);
-            await webhooksApi.CreateHook(Event.VersionModified, projectId, folderId);
+            await webhooksApi.CreateHook(Event.VersionAdded, projectId, folderId);
 
             return Ok();
         }
@@ -108,6 +109,7 @@ namespace WebHook.Controllers
 
             DMWebhook webhooksApi = new DMWebhook(Credentials.TokenInternal, CallbackUrl);
             await webhooksApi.DeleteHook(Event.VersionModified, folderId);
+            await webhooksApi.DeleteHook(Event.VersionAdded, folderId);
 
             return Ok();
         }
@@ -116,42 +118,69 @@ namespace WebHook.Controllers
         [Route("api/forge/callback/webhook")]
         public async Task<IActionResult> WebhookCallback([FromBody]JObject body)
         {
-            string eventType = body["hook"]["event"].ToString();
-            string userId = body["hook"]["createdBy"].ToString();
-            string projectId = body["hook"]["hookAttribute"]["projectId"].ToString();
-            string versionId = body["resourceUrn"].ToString();
+            // catch any errors, we don't want to return 500
+            try
+            {
+                string eventType = body["hook"]["event"].ToString();
+                string userId = body["hook"]["createdBy"].ToString();
+                string projectId = body["hook"]["hookAttribute"]["projectId"].ToString();
+                string versionId = body["resourceUrn"].ToString();
 
-            // do you want to filter events??
-            //if (eventType != "dm.version.modified") return Ok();
+                Console.WriteLine(eventType);
 
-            // starting a new thread is not an elegant idea,
-            // we don't have control if the operation actually complets...
-            // it's best to have a queueing system
-            new System.Threading.Tasks.Task(async () =>
-              {
-                  try
+                // do you want to filter events??
+                if (eventType != "dm.version.added") return Ok();
+
+                // your webhook should return immediately!
+                // so can start a second thread (not good) or use a queueing system (e.g. hangfire)
+
+                // starting a new thread is not an elegant idea, we don't have control if the operation actually complets...
+                /*
+                new System.Threading.Tasks.Task(async () =>
                   {
-                      Credentials credentials = await Credentials.FromDatabaseAsync(userId);
+                      // your code here
+                  }).Start();
+                */
 
-                      // at this point we have:
-                      // projectId & versionId
-                      // valid access token
+                // use Hangfire to schedule a job
+                BackgroundJob.Schedule(() => ExtractMetadata(userId, projectId, versionId), TimeSpan.FromSeconds(30));
+            }
+            catch { }
 
-                      // ready to access the files! let's do a quick test
-                      // as we're tracking the modified event, the manifest should be there...
-                      DerivativesApi derivativeApi = new DerivativesApi();
-                      derivativeApi.Configuration.AccessToken = credentials.TokenInternal;
-                      dynamic manifest = await derivativeApi.GetManifestAsync(Base64Encode(versionId));
-
-                      Console.WriteLine(manifest.ToString());
-                  }
-                  catch (Exception e)
-                  {
-                      Console.WriteLine(e);
-                  }
-              }).Start();
-
+            // ALWAYS return ok (200)
             return Ok();
+        }
+
+        public async static Task ExtractMetadata(string userId, string projectId, string versionId)
+        {
+            // this operation may take a moment
+            Credentials credentials = await Credentials.FromDatabaseAsync(userId);
+
+            // at this point we have:
+            // projectId & versionId
+            // valid access token
+
+            // ready to access the files! let's do a quick test
+            // as we're tracking the modified event, the manifest should be there...
+            try
+            {
+                DerivativesApi derivativeApi = new DerivativesApi();
+                derivativeApi.Configuration.AccessToken = credentials.TokenInternal;
+                dynamic manifest = await derivativeApi.GetManifestAsync(Base64Encode(versionId));
+
+                if (manifest.status == "inprogress") throw new Exception("Translating..."); // force run it again
+
+                // now we have the metadata, can do something, like send email or generate a report...
+                // for this sample, just a simple console write line
+                Console.WriteLine(manifest);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                throw; // this should force Hangfire to try again 
+            }
+
+
         }
 
         /// <summary>
@@ -159,7 +188,7 @@ namespace WebHook.Controllers
         /// </summary>
         /// <param name="plainText"></param>
         /// <returns></returns>
-        public string Base64Encode(string plainText)
+        public static string Base64Encode(string plainText)
         {
             var plainTextBytes = System.Text.Encoding.UTF8.GetBytes(plainText);
             return System.Convert.ToBase64String(plainTextBytes);

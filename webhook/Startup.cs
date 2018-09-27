@@ -10,6 +10,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Hangfire;
+using Hangfire.MemoryStorage;
 
 namespace WebHook
 {
@@ -25,6 +27,8 @@ namespace WebHook
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            // memory storage of jobs
+            services.AddHangfire(x => x.UseMemoryStorage());
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
         }
 
@@ -44,6 +48,11 @@ namespace WebHook
             app.UseStaticFiles();
             app.UseHttpsRedirection();
             app.UseMvc();
+
+            // Hangfire
+            GlobalConfiguration.Configuration.UseMemoryStorage();
+            app.UseHangfireDashboard();
+            app.UseHangfireServer();
         }
     }
 }

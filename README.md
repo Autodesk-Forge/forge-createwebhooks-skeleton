@@ -9,18 +9,19 @@
 [![Webhook](https://img.shields.io/badge/Webhook-v1-green.svg)](http://developer.autodesk.com/)
 
 
-![Intermediate](https://img.shields.io/badge/Level-Intermediate-blue.svg)
+![Advanced](https://img.shields.io/badge/Level-Advanced-red.svg)
 
 # Description
 
-Show BIM 360 Hubs, Projects and Files, based on [this tutorial](http://learnforge.autodesk.io). When select a folder on the tree view, the option to 
-
+Show BIM 360 Hubs, Projects and Files, based on [this tutorial](http://learnforge.autodesk.io). When select a folder on the tree view, the option to "Start watching folder" allow to create a `dm.version.added` webhook for that folder. When a new file is uploaded (e.g. via BIM 360 Docs UI) the webhook notifies the app, which queues the job to, later when ready, access the metadata of the file.
 
 ## Thumbnail
 
-## Live version
+![](thumbnail.png)
 
-ToDo
+## Demonstration
+
+There a few moving parts on this sample, [this video](https://www.youtube.com/watch?v=S35g6ZMHDXs)  demonstrates the sample.
 
 # Setup
 
@@ -30,6 +31,7 @@ ToDo
 2. **Visual Studio**: Either Community (Windows) or Code (Windows, MacOS).
 3. **.NET Core** basic knowledge with C#
 4. **ngrok**: Routing tool, [download here](https://ngrok.com/)
+5. **MongoDB**: noSQL database, [learn more](https://www.mongodb.com/). Or use a online version via [mLab](https://mlab.com/) (this is used on this sample)
 
 ## Running locally
 
@@ -63,14 +65,13 @@ At the `.vscode\launch.json`, find the env vars and add your Forge Client ID, Se
 },
 ```
 
+Open `http://localhost:3000` to start the app and `http://localhost:3000/hangfire` for jobs dashboard.
+
 ## Deployment
 
 To deploy this application to Heroku, the **Callback URL** for Forge must use your `.herokuapp.com` address. After clicking on the button below, at the Heroku Create New App page, set your Client ID, Secret and Callback URL for Forge.
 
 [![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy)
-
-### Know issues
-
 
 
 # Further Reading
@@ -80,6 +81,12 @@ Documentation:
 - [BIM 360 API](https://developer.autodesk.com/en/docs/bim360/v1/overview/) and [App Provisioning](https://forge.autodesk.com/blog/bim-360-docs-provisioning-forge-apps)
 - [Data Management API](https://developer.autodesk.com/en/docs/data/v2/overview/)
 - [Webhook](https://forge.autodesk.com/en/docs/webhooks/v1)
+
+Other APIs:
+
+- [Hangfire](https://www.hangfire.io/) queueing library for .NET
+- [MongoDB for C#](https://docs.mongodb.com/ecosystem/drivers/csharp/) driver
+- [mLab](https://mlab.com/) Database-as-a-Service for MongoDB
 
 
 ### Tips & Tricks
