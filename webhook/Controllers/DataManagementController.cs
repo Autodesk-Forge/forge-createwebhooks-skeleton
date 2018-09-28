@@ -22,6 +22,8 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Autodesk.Forge;
 using Autodesk.Forge.Model;
+using Newtonsoft.Json.Linq;
+using System.Net;
 
 namespace WebHook.Controllers
 {
@@ -82,10 +84,10 @@ namespace WebHook.Controllers
                 switch ((string)hubInfo.Value.attributes.extension.type)
                 {
                     case "hubs:autodesk.core:Hub":
-                        nodeType = "hubs";
+                        nodeType = "hubs"; // if showing only BIM 360, mark this as 'unsupported'
                         break;
                     case "hubs:autodesk.a360:PersonalHub":
-                        nodeType = "personalHub";
+                        nodeType = "personalHub"; // if showing only BIM 360, mark this as 'unsupported'
                         break;
                     case "hubs:autodesk.bim360:Account":
                         nodeType = "bim360Hubs";
@@ -93,7 +95,7 @@ namespace WebHook.Controllers
                 }
 
                 // create a treenode with the values
-                jsTreeNode hubNode = new jsTreeNode(hubInfo.Value.links.self.href, hubInfo.Value.attributes.name, nodeType, true);
+                jsTreeNode hubNode = new jsTreeNode(hubInfo.Value.links.self.href, hubInfo.Value.attributes.name, nodeType, !(nodeType == "unsupported"));
                 nodes.Add(hubNode);
             }
 
@@ -167,18 +169,75 @@ namespace WebHook.Controllers
             string folderId = idParams[idParams.Length - 1];
             string projectId = idParams[idParams.Length - 3];
 
-            var folderContents = await folderApi.GetFolderContentsAsync(projectId, folderId);
-            foreach (KeyValuePair<string, dynamic> folderContentItem in new DynamicDictionaryItems(folderContents.data))
-            {
-                string extensionType = folderContentItem.Value.attributes.extension.type;
-                if (extensionType.IndexOf("File") == -1 && extensionType.IndexOf("Folder") == -1 && extensionType.IndexOf("C4RModel") == -1) continue;
+            // check if folder specifies visible types
+            JArray visibleTypes = null;
+            dynamic folder = (await folderApi.GetFolderAsync(projectId, folderId)).ToJson();
+            if (folder.data.attributes != null && folder.data.attributes.extension != null && folder.data.attributes.extension.data != null && !(folder.data.attributes.extension.data is JArray) && folder.data.attributes.extension.data.visibleTypes != null)
+                visibleTypes = folder.data.attributes.extension.data.visibleTypes;
 
-                string displayName = (string.IsNullOrWhiteSpace(folderContentItem.Value.attributes.displayName) ? folderContentItem.Value.attributes.extension.data.sourceFileName : folderContentItem.Value.attributes.displayName);
-                jsTreeNode itemNode = new jsTreeNode(folderContentItem.Value.links.self.href, displayName, (string)folderContentItem.Value.type, true);
-                nodes.Add(itemNode);
+            var folderContents = await folderApi.GetFolderContentsAsync(projectId, folderId);
+            // the GET Folder Contents has 2 main properties: data & included (not always available)
+            var folderData = new DynamicDictionaryItems(folderContents.data);
+            var folderIncluded = (folderContents.Dictionary.ContainsKey("included") ? new DynamicDictionaryItems(folderContents.included) : null);
+
+            // let's start iterating the FOLDER DATA
+            foreach (KeyValuePair<string, dynamic> folderContentItem in folderData)
+            {
+                // do we need to skip some items? based on the visibleTypes of this folder
+                string extension = folderContentItem.Value.attributes.extension.type;
+                if (extension.IndexOf("Folder") /*any folder*/ == -1 && visibleTypes != null && !visibleTypes.ToString().Contains(extension)) continue;
+
+                // if the type is items:autodesk.bim360:Document we need some manipulation...
+                if (extension.Equals("items:autodesk.bim360:Document"))
+                {
+                    // as this is a DOCUMENT, lets interate the FOLDER INCLUDED to get the name (known issue)
+                    foreach (KeyValuePair<string, dynamic> includedItem in folderIncluded)
+                    {
+                        // check if the id match...
+                        if (includedItem.Value.relationships.item.data.id.IndexOf(folderContentItem.Value.id) != -1)
+                        {
+                            // found it! now we need to go back on the FOLDER DATA to get the respective FILE for this DOCUMENT
+                            foreach (KeyValuePair<string, dynamic> folderContentItem1 in folderData)
+                            {
+                                if (folderContentItem1.Value.attributes.extension.type.IndexOf("File") == -1) continue; // skip if type is NOT File
+
+                                // check if the sourceFileName match...
+                                if (folderContentItem1.Value.attributes.extension.data.sourceFileName == includedItem.Value.attributes.extension.data.sourceFileName)
+                                {
+                                    // ready!
+
+                                    // let's return for the jsTree with a special id:
+                                    // itemUrn|versionUrn|viewableId
+                                    // itemUrn: used as target_urn to get document issues
+                                    // versionUrn: used to launch the Viewer
+                                    // viewableId: which viewable should be loaded on the Viewer
+                                    // this information will be extracted when the user click on the tree node, see ForgeTree.js:136 (activate_node.jstree event handler)
+                                    string treeId = string.Format("{0}|{1}|{2}",
+                                        folderContentItem.Value.id, // item urn
+                                        Base64Encode(folderContentItem1.Value.relationships.tip.data.id), // version urn
+                                        includedItem.Value.attributes.extension.data.viewableId // viewableID
+                                    );
+                                    nodes.Add(new jsTreeNode(treeId, WebUtility.UrlDecode(includedItem.Value.attributes.name), "bim360documents", false));
+                                }
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    // non-Plans folder items
+                    nodes.Add(new jsTreeNode(folderContentItem.Value.links.self.href, folderContentItem.Value.attributes.displayName, (string)folderContentItem.Value.type, true));
+                }
             }
 
             return nodes;
+        }
+
+        private string GetName(DynamicDictionaryItems folderIncluded, KeyValuePair<string, dynamic> folderContentItem)
+        {
+
+
+            return "N/A";
         }
 
         private async Task<IList<jsTreeNode>> GetItemVersions(string href)
@@ -203,17 +262,23 @@ namespace WebHook.Controllers
 
                 string urn = string.Empty;
                 try { urn = (string)version.Value.relationships.derivatives.data.id; }
-                catch { urn = "not_available"; } // some BIM 360 versions don't have viewable
+                catch { urn = Base64Encode(version.Value.id); } // some BIM 360 versions don't have viewable
 
                 jsTreeNode node = new jsTreeNode(
-                    urn, 
-                    string.Format("v{0}: {1} by {2}", verNum, versionDate.ToString("dd/MM/yy HH:mm:ss"), userName), 
-                    "versions", 
+                    urn,
+                    string.Format("v{0}: {1} by {2}", verNum, versionDate.ToString("dd/MM/yy HH:mm:ss"), userName),
+                    "versions",
                     false);
                 nodes.Add(node);
             }
 
             return nodes;
+        }
+
+        public static string Base64Encode(string plainText)
+        {
+            var plainTextBytes = System.Text.Encoding.UTF8.GetBytes(plainText);
+            return System.Convert.ToBase64String(plainTextBytes).Replace("/", "_");
         }
 
         public class jsTreeNode

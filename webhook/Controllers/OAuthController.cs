@@ -93,6 +93,13 @@ namespace WebHook.Controllers
 
             return Redirect("/");
         }
+
+        [HttpGet]
+        [Route("api/forge/clientid")] // see Web.Config FORGE_CALLBACK_URL variable
+        public dynamic GetClientID()
+        {
+            return new { id = Credentials.GetAppSetting("FORGE_CLIENT_ID") };
+        }
     }
 
     /// <summary>

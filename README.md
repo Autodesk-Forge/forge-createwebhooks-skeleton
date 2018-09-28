@@ -43,13 +43,13 @@ Clone this project or download it. It's recommended to install [GitHub desktop](
 
 Right-click on the project, then go to **Debug**. Adjust the settings as shown below. 
 
-![](webhook/wwwroot/img/visual_studio_settings.png) 
+![](webhook/wwwroot/img/readme/visual_studio_settings.png) 
 
 **Visual Sutdio Code** (Windows, MacOS):
 
 Open the folder, at the bottom-right, select **Yes** and **Restore**. This restores the packages (e.g. Autodesk.Forge) and creates the launch.json file. See *Tips & Tricks* for .NET Core on MacOS.
 
-![](webhook/wwwroot/img/visual_code_restore.png)
+![](webhook/wwwroot/img/readme/visual_code_restore.png)
 
 **MongoDB**
 
