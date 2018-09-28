@@ -51,6 +51,21 @@ Open the folder, at the bottom-right, select **Yes** and **Restore**. This resto
 
 ![](webhook/wwwroot/img/visual_code_restore.png)
 
+**MongoDB**
+
+[MongoDB](https://www.mongodb.com) is a no-SQL database based on "documents", which stores JSON-like data. For testing purpouses, you can either use local or live. One easy way is using [mLab](https://mlab.com).
+
+1. Create a account
+2. Create a new database (e.g. named `webhooks`)
+3. Under **Collections**, add a new `users` collection
+4. Under **Users**, add a new database user, e.g. `appuser`
+
+At this point the connection string should be in the form of `mongodb://<dbuser>:<dbpassword>@ds<number>.mlab.com:<port>/webhook`. 
+
+There are several tools to view your database, [Robo 3T](https://robomongo.org/) (formerly Robomongo) is a free lightweight GUI that can be used. When it opens, click on **Create**, then at **Connection** specify a `name`, enter your `ds<number>.mlab.com` as address and `<port>` number as port, also at **Authentication** enter the datbase name (e.g. `webhook`) and `<dbuser>` and `<dbpassword>`.
+
+**Environment variables**
+
 At the `.vscode\launch.json`, find the env vars and add your Forge Client ID, Secret and callback URL. Also define the `ASPNETCORE_URLS` variable. The end result should be as shown below:
 
 ```json
@@ -61,11 +76,13 @@ At the `.vscode\launch.json`, find the env vars and add your Forge Client ID, Se
     "FORGE_CLIENT_SECRET": "your secret here",
     "FORGE_CALLBACK_URL": "http://localhost:3000/api/forge/callback/oauth",
     "FORGE_WEBHOOK_CALLBACK_URL": "http://1234.ngrok.io/api/forge/callback/webhook",
-    "OAUTH_DATABASE": "mongodb://user:password@ds1234.mlab.com:5678/databaseName"
+    "OAUTH_DATABASE": "mongodb://<dbuser>:<dbpassword>@ds<number>.mlab.com:<port>/webhook"
 },
 ```
 
-Open `http://localhost:3000` to start the app and `http://localhost:3000/hangfire` for jobs dashboard.
+Open `http://localhost:3000` to start the app.
+
+Open `http://localhost:3000/hangfire` for jobs dashboard.
 
 ## Deployment
 
@@ -88,6 +105,9 @@ Other APIs:
 - [MongoDB for C#](https://docs.mongodb.com/ecosystem/drivers/csharp/) driver
 - [mLab](https://mlab.com/) Database-as-a-Service for MongoDB
 
+### Known Issues
+
+- **No webhook for translation**: this sample tries `GET Manifest` every interval as, as of now, there is no webhook for Model Derivative translations on BIM 360 files. There is support for OSS Buckets translations, [learn more here](https://forge.autodesk.com/en/docs/webhooks/v1/tutorials/create-a-hook-model-derivative/). 
 
 ### Tips & Tricks
 
