@@ -108,7 +108,6 @@ namespace WebHook.Controllers
             if (Credentials == null) { return Unauthorized(); }
 
             DMWebhook webhooksApi = new DMWebhook(Credentials.TokenInternal, CallbackUrl);
-            await webhooksApi.DeleteHook(Event.VersionModified, folderId);
             await webhooksApi.DeleteHook(Event.VersionAdded, folderId);
 
             return Ok();
@@ -125,8 +124,6 @@ namespace WebHook.Controllers
                 string userId = body["hook"]["createdBy"].ToString();
                 string projectId = body["hook"]["hookAttribute"]["projectId"].ToString();
                 string versionId = body["resourceUrn"].ToString();
-
-                Console.WriteLine(eventType);
 
                 // do you want to filter events??
                 if (eventType != "dm.version.added") return Ok();
@@ -179,8 +176,6 @@ namespace WebHook.Controllers
                 Console.WriteLine(e);
                 throw; // this should force Hangfire to try again 
             }
-
-
         }
 
         /// <summary>
