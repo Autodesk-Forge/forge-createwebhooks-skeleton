@@ -17,7 +17,7 @@ Show BIM 360 Hubs, Projects and Files, based on [this tutorial](http://learnforg
 
 ## Thumbnail
 
-![](thumbnail.png)
+![thumbnail](thumbnail.png)
 
 ## Demonstration
 
