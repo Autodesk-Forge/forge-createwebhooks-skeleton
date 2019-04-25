@@ -37,7 +37,7 @@ namespace WebHook.Controllers
 
         // with the api/forge/callback/webhook endpoint
         // e.g. local testing with http://1234.ngrok.io/api/forge/callback/webhook
-        public string CallbackUrl { get { return Credentials.GetAppSetting("FORGE_WEBHOOK_CALLBACK_URL"); } }
+        public string CallbackUrl { get { return Credentials.GetAppSetting("FORGE_WEBHOOK_URL") + "/api/forge/callback/webhook"; } }
 
         private string ExtractFolderIdFromHref(string href)
         {

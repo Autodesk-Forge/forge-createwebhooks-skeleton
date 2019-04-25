@@ -25,6 +25,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using System.Linq;
 
 namespace WebHook.Controllers
 {
@@ -49,7 +50,7 @@ namespace WebHook.Controllers
         {
             get
             {
-                if (_database == null) _database = Client.GetDatabase("desktopcloudsample");
+                if (_database == null) _database = Client.GetDatabase(OAuthDatabase.Split('/').Last().Split('?').First());
                 return _database;
             }
         }
