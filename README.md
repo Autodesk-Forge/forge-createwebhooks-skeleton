@@ -1,7 +1,7 @@
 # data.management-csharp-webhook
 
 ![Platforms](https://img.shields.io/badge/platform-Windows|MacOS-lightgray.svg)
-![.NET](https://img.shields.io/badge/.NET%20Core-2.1-blue.svg)
+![.NET](https://img.shields.io/badge/.NET%20Core-2.2-blue.svg)
 [![License](http://img.shields.io/:license-MIT-blue.svg)](http://opensource.org/licenses/MIT)
 
 [![oAuth2](https://img.shields.io/badge/oAuth2-v1-green.svg)](http://developer.autodesk.com/)
@@ -74,7 +74,7 @@ At the `.vscode\launch.json`, find the env vars and add your Forge Client ID, Se
     "FORGE_CLIENT_ID": "your id here",
     "FORGE_CLIENT_SECRET": "your secret here",
     "FORGE_CALLBACK_URL": "http://localhost:3000/api/forge/callback/oauth",
-    "FORGE_WEBHOOK_URL": "http://1234.ngrok.io/api/forge/callback/webhook",
+    "FORGE_WEBHOOK_URL": "your ngrok address here: e.g. http://abcd1234.ngrok.io",
     "OAUTH_DATABASE": "mongodb+srv://<username>:<password>@clusterX-a1b2c4.mongodb.net/webhook?retryWrites=true",
 },
 ```
@@ -102,7 +102,7 @@ Other APIs:
 
 - [Hangfire](https://www.hangfire.io/) queueing library for .NET
 - [MongoDB for C#](https://docs.mongodb.com/ecosystem/drivers/csharp/) driver
-- [mLab](https://mlab.com/) Database-as-a-Service for MongoDB
+- [Mongo Atlas](https://mongodb.com/) Database-as-a-Service for MongoDB
 
 ### Known Issues
 
