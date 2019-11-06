@@ -1,4 +1,4 @@
-# data.management-csharp-webhook
+# Basic skeleton for 3-legged OAuth and Webhooks
 
 ![Platforms](https://img.shields.io/badge/platform-Windows|MacOS-lightgray.svg)
 ![.NET](https://img.shields.io/badge/.NET%20Core-2.2-blue.svg)
