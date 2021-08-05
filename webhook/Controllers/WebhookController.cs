@@ -39,60 +39,75 @@ namespace WebHook.Controllers
         // e.g. local testing with http://1234.ngrok.io
         public string CallbackUrl { get { return Credentials.GetAppSetting("FORGE_WEBHOOK_URL") + "/api/forge/callback/webhook"; } }
 
-        private string ExtractFolderIdFromHref(string href)
-        {
-            string[] idParams = href.Split('/');
-            string resource = idParams[idParams.Length - 2];
-            string folderId = idParams[idParams.Length - 1];
-            if (!resource.Equals("folders")) return string.Empty;
-            return folderId;
-        }
-
-        private string ExtractProjectIdFromHref(string href)
-        {
-            string[] idParams = href.Split('/');
-            string resource = idParams[idParams.Length - 4];
-            string folderId = idParams[idParams.Length - 3];
-            if (!resource.Equals("projects")) return string.Empty;
-            return folderId;
-        }
 
         [HttpGet]
         [Route("api/forge/webhook")]
-        public async Task<IList<GetHookData.Hook>> GetHooks(string href)
+        public async Task<IList<GetHookData.Hook>> GetHooks(string folder, string hub)
         {
-            string folderId = ExtractFolderIdFromHref(href);
+            string folderId = HookInputData.ExtractFolderIdFromHref(folder);
             if (string.IsNullOrWhiteSpace(folderId)) return null;
+
+            string hubId = HookInputData.ExtractHubIdFromHref(hub);
+            if (string.IsNullOrWhiteSpace(hubId)) return null;
 
             Credentials = await Credentials.FromSessionAsync(base.Request.Cookies, Response.Cookies);
             if (Credentials == null) { return null; }
 
             DMWebhook webhooksApi = new DMWebhook(Credentials.TokenInternal, CallbackUrl);
-            IList<GetHookData.Hook> hooks = await webhooksApi.Hooks(Event.VersionAdded, folderId);
+            IList<GetHookData.Hook> hooks = await webhooksApi.Hooks(Event.VersionAdded, folderId, await webhooksApi.GetHubRegion(hubId));
 
             return hooks;
         }
 
         public class HookInputData
         {
-            public string href { get; set; }
+            public static string ExtractFolderIdFromHref(string href)
+            {
+                string[] idParams = href.Split('/');
+                string resource = idParams[idParams.Length - 2];
+                string folderId = idParams[idParams.Length - 1];
+                if (!resource.Equals("folders")) return string.Empty;
+                return folderId;
+            }
+
+            public static string ExtractProjectIdFromHref(string href)
+            {
+                string[] idParams = href.Split('/');
+                string resource = idParams[idParams.Length - 4];
+                string folderId = idParams[idParams.Length - 3];
+                if (!resource.Equals("projects")) return string.Empty;
+                return folderId;
+            }
+
+            public static string ExtractHubIdFromHref(string href)
+            {
+                string[] idParams = href.Split('/');
+                string resource = idParams[idParams.Length - 2];
+                string hubId = idParams[idParams.Length - 1];
+                if (!resource.Equals("hubs")) return string.Empty;
+                return hubId;
+            }
+            public string folder {  get; set; }
+            public string hub {  get; set; }
+
+            public string FolderId { get { return ExtractFolderIdFromHref(folder); } }
+            public string ProjectId { get { return ExtractProjectIdFromHref(folder); } }
+            public string HubId { get { return ExtractHubIdFromHref(hub); } }
         }
 
         [HttpPost]
         [Route("api/forge/webhook")]
-        public async Task<IActionResult> CreateHook([FromForm]HookInputData input)
+        public async Task<IActionResult> CreateHook([FromForm] HookInputData input)
         {
-            string folderId = ExtractFolderIdFromHref(input.href);
-            if (string.IsNullOrWhiteSpace(folderId)) return BadRequest();
-
-            string projectId = ExtractProjectIdFromHref(input.href);
-            if (string.IsNullOrWhiteSpace(projectId)) return BadRequest();
+            if (string.IsNullOrWhiteSpace(input.FolderId)) return BadRequest();
+            if (string.IsNullOrWhiteSpace(input.ProjectId)) return BadRequest();
+            if (string.IsNullOrWhiteSpace(input.HubId)) return BadRequest();
 
             Credentials = await Credentials.FromSessionAsync(base.Request.Cookies, Response.Cookies);
             if (Credentials == null) { return Unauthorized(); }
 
             DMWebhook webhooksApi = new DMWebhook(Credentials.TokenInternal, CallbackUrl);
-            await webhooksApi.CreateHook(Event.VersionAdded, projectId, folderId);
+            await webhooksApi.CreateHook(Event.VersionAdded, input.ProjectId, input.FolderId, await webhooksApi.GetHubRegion(input.HubId));
 
             return Ok();
         }
@@ -101,21 +116,22 @@ namespace WebHook.Controllers
         [Route("api/forge/webhook")]
         public async Task<IActionResult> DeleteHook(HookInputData input)
         {
-            string folderId = ExtractFolderIdFromHref(input.href);
-            if (string.IsNullOrWhiteSpace(folderId)) return BadRequest();
+            if (string.IsNullOrWhiteSpace(input.FolderId)) return BadRequest();
+            if (string.IsNullOrWhiteSpace(input.ProjectId)) return BadRequest();
+            if (string.IsNullOrWhiteSpace(input.HubId)) return BadRequest();
 
             Credentials = await Credentials.FromSessionAsync(base.Request.Cookies, Response.Cookies);
             if (Credentials == null) { return Unauthorized(); }
 
             DMWebhook webhooksApi = new DMWebhook(Credentials.TokenInternal, CallbackUrl);
-            await webhooksApi.DeleteHook(Event.VersionAdded, folderId);
+            await webhooksApi.DeleteHook(Event.VersionAdded, input.FolderId, await webhooksApi.GetHubRegion(input.HubId));
 
             return Ok();
         }
 
         [HttpPost]
         [Route("api/forge/callback/webhook")]
-        public async Task<IActionResult> WebhookCallback([FromBody]JObject body)
+        public async Task<IActionResult> WebhookCallback([FromBody] JObject body)
         {
             // catch any errors, we don't want to return 500
             try

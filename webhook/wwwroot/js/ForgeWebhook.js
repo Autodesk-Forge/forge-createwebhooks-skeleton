@@ -24,8 +24,10 @@ function WebhookNodeSelected(node) {
 function updateCurrentMonitor(node) {
   $('#startMonitorFolder').hide();
   $('#stopMonitorFolder').hide();
+
+  var hubHref = node.parents[node.parents.length - 2];
   jQuery.ajax({
-    url: '/api/forge/webhook?href=' + node.id,
+    url: '/api/forge/webhook?folder=' + node.id + '&hub=' + hubHref,
     success: function (res) {
       if (res.length == 0)
         $('#startMonitorFolder').show();
@@ -42,10 +44,11 @@ $(document).ready(function () {
   $('#startMonitorFolder').click(function () {
     var node = $("#userHubs").jstree("get_selected", true);
     if (node.length != 1 || node[0].type !== 'folders') return;
+    var hub = node[0].parents[node[0].parents.length - 2];
     $.ajax({
       type: "POST",
       url: '/api/forge/webhook',
-      data: { href: node[0].id },
+      data: { folder: node[0].id, hub: hub },
       success: function (res) {
         updateCurrentMonitor(node[0]);
       }
@@ -55,10 +58,11 @@ $(document).ready(function () {
   $('#stopMonitorFolder').click(function () {
     var node = $("#userHubs").jstree("get_selected", true);
     if (node.length != 1 || node[0].type !== 'folders') return;
+    var hub = node[0].parents[node[0].parents.length - 2];
     $.ajax({
       type: "DELETE",
       url: '/api/forge/webhook',
-      data: { href: node[0].id },
+      data: { folder: node[0].id, hub: hub },
       success: function (res) {
         updateCurrentMonitor(node[0]);
       }

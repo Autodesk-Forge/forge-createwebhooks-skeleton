@@ -16,6 +16,7 @@
 // UNINTERRUPTED OR ERROR FREE.
 /////////////////////////////////////////////////////////////////////
 
+using Autodesk.Forge;
 using Newtonsoft.Json.Linq;
 using RestSharp;
 using System;
@@ -38,17 +39,26 @@ namespace WebHook.Controllers
             CallbackURL = callbackUrl;
         }
 
+        public async Task<string> GetHubRegion(string hubId)
+        {
+            HubsApi hubsApi = new HubsApi();
+            hubsApi.Configuration.AccessToken = AccessToken;
+            var hub = await hubsApi.GetHubAsync(hubId);
+            return hub.data.attributes.region;
+        }
+
         /// <summary>
         /// http://developer.autodesk.com/en/docs/webhooks/v1/reference/http/systems-system-events-event-hooks-GET/
         /// </summary>
         /// <param name="eventType"></param>
         /// <returns></returns>
-        public async Task<IList<GetHookData.Hook>> Hooks(Event eventType, string folderId)
+        public async Task<IList<GetHookData.Hook>> Hooks(Event eventType, string folderId, string region)
         {
             RestRequest request = new RestRequest("/webhooks/v1/systems/data/events/{event}/hooks?scopeName=folder&scopeValue={folderId}", Method.GET);
             request.AddParameter("event", EnumToString(eventType), ParameterType.UrlSegment);
             request.AddParameter("folderId", folderId, ParameterType.UrlSegment);
             request.AddHeader("Authorization", "Bearer " + AccessToken);
+            request.AddHeader("x-ads-region", region);
 
             IRestResponse<GetHookData> response = await client.ExecuteTaskAsync<GetHookData>(request);
 
@@ -60,7 +70,7 @@ namespace WebHook.Controllers
         /// http://developer.autodesk.com/en/docs/webhooks/v1/reference/http/systems-system-events-event-hooks-POST/
         /// </summary>
         /// <returns></returns>
-        public async Task<HttpStatusCode> CreateHook(Event eventType, string projectId, string folderId)
+        public async Task<HttpStatusCode> CreateHook(Event eventType, string projectId, string folderId, string region)
         {
             dynamic body = new JObject();
             body.callbackUrl = CallbackURL;
@@ -72,6 +82,7 @@ namespace WebHook.Controllers
             RestRequest request = new RestRequest("/webhooks/v1/systems/data/events/{event}/hooks", Method.POST);
             request.AddParameter("event", EnumToString(eventType), ParameterType.UrlSegment);
             request.AddHeader("Authorization", "Bearer " + AccessToken);
+            request.AddHeader("x-ads-region", region);
             request.AddParameter("application/json", body.ToString(), ParameterType.RequestBody);
             IRestResponse response = await client.ExecuteTaskAsync(request);
 
@@ -82,9 +93,9 @@ namespace WebHook.Controllers
         /// http://developer.autodesk.com/en/docs/webhooks/v1/reference/http/systems-system-events-event-hooks-hook_id-DELETE/
         /// </summary>
         /// <returns></returns>
-        public async Task<IDictionary<string, HttpStatusCode>> DeleteHook(Event eventType, string folderId)
+        public async Task<IDictionary<string, HttpStatusCode>> DeleteHook(Event eventType, string folderId, string region)
         {
-            IList<GetHookData.Hook> hooks = await Hooks(eventType, folderId);
+            IList<GetHookData.Hook> hooks = await Hooks(eventType, folderId, region);
             IDictionary<string, HttpStatusCode> status = new Dictionary<string, HttpStatusCode>();
 
             foreach (GetHookData.Hook hook in hooks)
@@ -93,6 +104,7 @@ namespace WebHook.Controllers
                 request.AddParameter("event", EnumToString(eventType), ParameterType.UrlSegment);
                 request.AddParameter("hook_id", hook.hookId, ParameterType.UrlSegment);
                 request.AddHeader("Authorization", "Bearer " + AccessToken);
+                request.AddHeader("x-ads-region", region);
                 IRestResponse response = await client.ExecuteTaskAsync(request);
 
                 status.Add(hook.hookId, response.StatusCode);

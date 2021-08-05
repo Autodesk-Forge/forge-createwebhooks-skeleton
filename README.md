@@ -1,7 +1,7 @@
 # Basic skeleton for 3-legged OAuth and Webhooks
 
 ![Platforms](https://img.shields.io/badge/platform-Windows|MacOS-lightgray.svg)
-![.NET](https://img.shields.io/badge/.NET%20Core-2.2-blue.svg)
+![.NET](https://img.shields.io/badge/.NET%20Core-3.1-blue.svg)
 [![License](http://img.shields.io/:license-MIT-blue.svg)](http://opensource.org/licenses/MIT)
 
 [![oAuth2](https://img.shields.io/badge/oAuth2-v1-green.svg)](http://developer.autodesk.com/)
@@ -37,7 +37,7 @@ There a few moving parts on this sample, [this video](https://www.youtube.com/wa
 
 Clone this project or download it. It's recommended to install [GitHub desktop](https://desktop.github.com/). To clone it via command line, use the following (**Terminal** on MacOSX/Linux, **Git Shell** on Windows):
 
-    git clone https://github.com/autodesk-forge/data.management-csharp-webhook
+    git clone https://github.com/autodesk-forge/forge-createwebhooks-skeleton
 
 **Visual Studio** (Windows):
 
@@ -45,7 +45,7 @@ Right-click on the project, then go to **Debug**. Adjust the settings as shown b
 
 ![](webhook/wwwroot/img/readme/visual_studio_settings.png) 
 
-**Visual Sutdio Code** (Windows, MacOS):
+**Visual Code** (Windows, MacOS):
 
 Open the folder, at the bottom-right, select **Yes** and **Restore**. This restores the packages (e.g. Autodesk.Forge) and creates the launch.json file. See *Tips & Tricks* for .NET Core on MacOS.
 
@@ -56,12 +56,16 @@ Open the folder, at the bottom-right, select **Yes** and **Restore**. This resto
 [MongoDB](https://www.mongodb.com) is a no-SQL database based on "documents", which stores JSON-like data. For testing purpouses, you can either use local or live. For cloud environment, try [MongoDB Atlas](https://www.mongodb.com/cloud/atlas) (offers a free tier). With MongoDB Atlas you can set up an account for free and create clustered instances, intructions:
 
 1. Create a account on MongoDB Atlas.
-2. Under "Collections", create a new database (e.g. named `designcheck`) with a collection (e.g. named `users`).
+2. Under "Collections", create a new database (e.g. named `webhooks`) with a collection (e.g. named `users`).
 3. Under "Command Line Tools", whitelist the IP address to access the database, [see this tutorial](https://docs.atlas.mongodb.com/security-whitelist/). If the sample is running on Heroku, you'll need to open to all (IP `0.0.0.0/0`). Create a new user to access the database. 
 
 At this point the connection string should be in the form of `mongodb+srv://<username>:<password>@clusterX-a1b2c4.mongodb.net/webhook?retryWrites=true`. [Learn more here](https://docs.mongodb.com/manual/reference/connection-string/)
 
 There are several tools to view your database, [Robo 3T](https://robomongo.org/) (formerly Robomongo) is a free lightweight GUI that can be used. When it opens, follow instructions [here](https://www.datduh.com/blog/2017/7/26/how-to-connect-to-mongodb-atlas-using-robo-3t-robomongo) to connect to MongoDB Atlas.
+
+**ngrok**
+
+Run `ngrok http 3000 -host-header="localhost:3000"` to create a tunnel to your local machine, then copy the address into the `FORGE_WEBHOOK_URL` environment variable.
 
 **Environment variables**
 
